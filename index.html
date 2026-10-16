@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViralBoost - Firebase Powered</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+  body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: #333; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  
+  .loading-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 99999;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .loading-overlay.active { display: flex; }
+  .spinner {
+    width: 60px; height: 60px;
+    border: 6px solid rgba(255,255,255,0.3);
+    border-top-color: #06ffa5;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  header {
+    background: rgba(255,255,255,0.95);
+    padding: 15px 30px;
+    border-radius: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .logo {
+    font-size: 26px;
+    font-weight: bold;
+    background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .firebase-badge {
+    background: #ffa000;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+  }
+  .user-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; color: white; }
+  .badge.creator { background: #ff006e; }
+  .badge.viewer { background: #3a86ff; }
+  .badge.admin { background: #ff8c00; }
+  .badge.location { background: #06ffa5; color: #004d2e; }
+  .badge.wallet { background: #ffd700; color: #333; }
+  .logout-btn { background: #ef476f; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+  .auth-screen {
+    background: rgba(255,255,255,0.97);
+    max-width: 550px;
+    margin: 40px auto;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .auth-screen h2 { text-align: center; margin-bottom: 25px; color: #333; font-size: 26px; }
+  .user-type-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+  .type-card {
+    padding: 20px 15px;
+    border: 3px solid #e0e0e0;
+    border-radius: 15px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .type-card.active.creator { border-color: #ff006e; background: #fff0f6; }
+  .type-card.active.viewer { border-color: #3a86ff; background: #f0f7ff; }
+  .type-card .icon { font-size: 40px; margin-bottom: 8px; }
+  .type-card .title { font-weight: bold; font-size: 16px; }
+  .type-card .desc { font-size: 12px; color: #777; margin-top: 5px; }
+
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: #555; }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    background: white;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: #764ba2; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(45deg, #ff006e, #8338ec);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .btn-success {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(45deg, #06ffa5, #00b894);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+
+  .dashboard { display: none; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 18px;
+    margin-bottom: 25px;
+  }
+  .stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: bold;
+    background: linear-gradient(45deg, #ff006e, #8338ec);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .stat-card .label { font-size: 13px; color: #777; margin-top: 5px; }
+  .stat-card.wallet-card { background: linear-gradient(45deg, #ffd700, #ffed4e); }
+  .stat-card.wallet-card .value { background: none; -webkit-text-fill-color: #333; color: #333; }
+  .stat-card.wallet-card .label { color: #555; }
+
+  .panel {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+  }
+  .panel h3 { margin-bottom: 18px; color: #333; border-left: 4px solid #8338ec; padding-left: 12px; }
+
+  .add-money-box {
+    background: linear-gradient(45deg, #06ffa5, #3a86ff);
+    padding: 20px;
+    border-radius: 15px;
+    color: white;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  .add-money-box .balance { font-size: 32px; font-weight: bold; }
+  .add-money-box button {
+    background: white;
+    color: #3a86ff;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 10001;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-container {
+    background: white;
+    border-radius: 20px;
+    max-width: 550px;
+    width: 100%;
+    max-height: 95vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-header {
+    background: linear-gradient(45deg, #ff006e, #8338ec);
+    padding: 20px 25px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .modal-header h3 { font-size: 18px; }
+  .modal-header .close-btn {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .modal-body { padding: 25px; }
+  
+  .amount-display {
+    text-align: center;
+    padding: 20px;
+    background: #f0f7ff;
+    border-radius: 15px;
+    margin-bottom: 20px;
+  }
+  .amount-display .label { font-size: 13px; color: #666; }
+  .amount-display .amount { font-size: 42px; font-weight: bold; color: #3a86ff; }
+
+  .topup-options { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 10px; }
+  .topup-btn {
+    padding: 12px;
+    background: #f0f7ff;
+    border: 2px solid #3a86ff;
+    color: #3a86ff;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .topup-btn:hover, .topup-btn.selected { background: #3a86ff; color: white; }
+
+  .qr-container { text-align: center; padding: 20px; background: #f9f9f9; border-radius: 15px; margin-bottom: 20px; }
+  .qr-box { display: inline-block; padding: 15px; background: white; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 15px; }
+  .qr-code { width: 220px; height: 220px; display: block; }
+  .upi-id-display {
+    background: white;
+    padding: 12px 18px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+    border: 2px dashed #8338ec;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .copy-btn { background: #8338ec; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+
+  .payment-steps {
+    background: #f0f7ff;
+    border-left: 4px solid #3a86ff;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.8;
+    margin-bottom: 15px;
+  }
+  .payment-steps ol { margin-left: 20px; }
+
+  .warning-box {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 12px 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 15px;
+    line-height: 1.6;
+  }
+
+  .utr-input {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #8338ec;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .utr-input:focus { outline: none; box-shadow: 0 0 0 3px rgba(131,56,236,0.2); }
+
+  .status { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; }
+  .status.pending { background: #ffc107; color: #333; }
+  .status.approved, .status.completed { background: #06ffa5; color: #004d2e; }
+  .status.rejected, .status.failed { background: #ef476f; color: white; }
+
+  .payment-history-list { max-height: 400px; overflow-y: auto; }
+  .payment-item {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid #ffc107;
+  }
+  .payment-item.approved { border-left-color: #06ffa5; }
+  .payment-item.rejected { border-left-color: #ef476f; }
+  .payment-item .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+  .payment-item .amount { font-size: 20px; font-weight: bold; }
+  .payment-item .details { font-size: 12px; color: #666; line-height: 1.6; }
+  .payment-item .utr { font-family: monospace; background: #e0e0e0; padding: 2px 6px; border-radius: 4px; }
+
+  .no-data { color: #999; text-align: center; padding: 30px; font-size: 14px; }
+
+  .admin-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .admin-table th { background: #f0f7ff; padding: 12px; text-align: left; font-size: 13px; border-bottom: 2px solid #e0e0e0; }
+  .admin-table td { padding: 12px; font-size: 13px; border-bottom: 1px solid #e0e0e0; }
+  .admin-table tr:hover { background: #f9f9f9; }
+  .action-btn { padding: 6px 12px; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; margin-right: 5px; }
+  .approve-btn { background: #06ffa5; color: #004d2e; }
+  .reject-btn { background: #ef476f; color: white; }
+
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    background: #06ffa5;
+    color: #004d2e;
+    border-radius: 10px;
+    font-weight: bold;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    z-index: 99999;
+    animation: slideIn 0.3s;
+    max-width: 350px;
+  }
+  .toast.error { background: #ef476f; color: white; }
+  .toast.info { background: #3a86ff; color: white; }
+  @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
+
+  .admin-login {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 20px;
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+  .video-card { background: #f9f9f9; border-radius: 12px; overflow: hidden; border: 2px solid transparent; }
+  .video-card.paused { opacity: 0.6; border-color: #ef476f; }
+  .video-thumb {
+    height: 140px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+    color: white;
+    position: relative;
+  }
+  .platform-tag { position: absolute; top: 8px; right: 8px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; color: white; }
+  .platform-tag.youtube { background: #ff0000; }
+  .platform-tag.facebook { background: #1877f2; }
+  .platform-tag.instagram { background: #e1306c; }
+  .location-tag { position: absolute; top: 8px; left: 8px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; color: #004d2e; background: #06ffa5; }
+  .paused-tag { position: absolute; bottom: 8px; left: 8px; right: 8px; padding: 6px; border-radius: 8px; font-size: 12px; font-weight: bold; color: white; background: #ef476f; text-align: center; }
+  .video-info { padding: 15px; }
+  .video-info h4 { font-size: 15px; margin-bottom: 6px; }
+  .video-info p { font-size: 12px; color: #777; margin-bottom: 10px; }
+  .reward-badge { display: inline-block; background: #06ffa5; color: #004d2e; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+  .btn-watch { width: 100%; padding: 10px; background: #8338ec; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+
+  .video-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 10000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .video-modal-overlay.active { display: flex; }
+  .video-modal {
+    background: #1a1a1a;
+    border-radius: 20px;
+    max-width: 600px;
+    width: 100%;
+    color: white;
+    overflow: hidden;
+  }
+  .video-modal-header { padding: 20px 25px; background: #2a2a2a; display: flex; justify-content: space-between; align-items: center; }
+  .video-modal-header .close-btn { background: #ef476f; color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; font-weight: bold; }
+  .video-modal-body { padding: 30px; text-align: center; }
+  .video-placeholder { background: #000; height: 200px; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 25px; }
+  .video-placeholder .icon { font-size: 60px; margin-bottom: 10px; }
+  .timer-circle { position: relative; width: 120px; height: 120px; margin: 0 auto 25px; }
+  .timer-svg { transform: rotate(-90deg); width: 120px; height: 120px; }
+  .timer-bg { fill: none; stroke: #333; stroke-width: 8; }
+  .timer-progress { fill: none; stroke: #06ffa5; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+  .timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 32px; font-weight: bold; color: #06ffa5; }
+  .watching-info { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; color: #ccc; line-height: 1.6; }
+  .watching-info .reward-highlight { color: #06ffa5; font-size: 20px; font-weight: bold; }
+  .modal-success { background: linear-gradient(45deg, #06ffa5, #00b894); color: white; padding: 25px; border-radius: 15px; margin-top: 20px; }
+  .modal-success .icon { font-size: 50px; margin-bottom: 10px; }
+
+  .withdraw-box {
+    background: linear-gradient(45deg, #ffd700, #ff8c00);
+    padding: 25px;
+    border-radius: 15px;
+    color: white;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .withdraw-box .amount { font-size: 42px; font-weight: bold; margin: 10px 0; }
+  .withdraw-box button { background: white; color: #ff8c00; border: none; padding: 14px 35px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; }
+  .withdraw-box button:disabled { background: #ccc; color: #666; cursor: not-allowed; }
+  .withdraw-form { display: none; }
+  .withdraw-form.active { display: block; }
+  .payment-method-selector { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px; }
+  .payment-option { padding: 15px 10px; border: 3px solid #e0e0e0; border-radius: 12px; text-align: center; cursor: pointer; }
+  .payment-option.active { border-color: #06ffa5; background: #f0fff8; }
+  .payment-option .icon { font-size: 30px; margin-bottom: 5px; }
+  .payment-option .name { font-size: 13px; font-weight: bold; }
+
+  .history-list { max-height: 300px; overflow-y: auto; }
+  .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #f9f9f9; border-radius: 10px; margin-bottom: 8px; font-size: 14px; flex-wrap: wrap; gap: 8px; }
+</style>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { 
+    getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+    query, where, orderBy, limit, serverTimestamp, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  // ============================================
+  // ⚠️ APNA FIREBASE CONFIG YAHAN PASTE KAREIN
+  // ============================================
+   const firebaseConfig = {
+    apiKey: "AIzaSyBbilGzU6zkQI2TcovRo-Tv0Sojm9akC2A",
+    authDomain: "view-c751c.firebaseapp.com",
+    projectId: "view-c751c",
+    storageBucket: "view-c751c.firebasestorage.app",
+    messagingSenderId: "532790623745",
+    appId: "1:532790623745:web:509740cf70c65da1ef0a00",
+    measurementId: "G-JD1XFN8RMM"
+  };
+
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Make available globally
+  window.db = db;
+  window.firestoreFns = {
+    collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+    query, where, orderBy, limit, serverTimestamp, onSnapshot
+  };
+  window.firebaseReady = true;
+  
+  console.log('🔥 Firebase initialized');
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div id="loadingText">Loading...</div>
+</div>
+
+<div class="container">
+
+  <!-- ============ AUTH SCREEN ============ -->
+  <div id="authScreen">
+    <header>
+      <div class="logo">🚀 ViralBoost</div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span class="firebase-badge">🔥 FIREBASE</span>
+        <span style="font-size: 14px; color: #666;">Cloud Powered</span>
+      </div>
+    </header>
+
+    <div class="auth-screen">
+      <h2>Registration / Login</h2>
+      
+      <div class="user-type-selector">
+        <div class="type-card creator active" data-type="creator" onclick="selectType('creator')">
+          <div class="icon">🎬</div>
+          <div class="title">Creator</div>
+          <div class="desc">UPI se paisa add karo</div>
+        </div>
+        <div class="type-card viewer" data-type="viewer" onclick="selectType('viewer')">
+          <div class="icon">👀</div>
+          <div class="title">Viewer</div>
+          <div class="desc">Dekh kar cash kamao</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>👤 Naam</label>
+        <input type="text" id="userName" placeholder="Apna naam">
+      </div>
+      <div class="form-group">
+        <label>📧 Email</label>
+        <input type="email" id="userEmail" placeholder="email@example.com">
+      </div>
+      <div class="form-group">
+        <label>🔒 Password</label>
+        <input type="password" id="userPass" placeholder="Password">
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>📍 State</label>
+          <select id="userState">
+            <option value="">-- State --</option>
+            <option value="West Bengal">West Bengal</option>
+            <option value="Bihar">Bihar</option>
+            <option value="Delhi">Delhi</option>
+            <option value="Maharashtra">Maharashtra</option>
+            <option value="Uttar Pradesh">Uttar Pradesh</option>
+            <option value="Tamil Nadu">Tamil Nadu</option>
+            <option value="Karnataka">Karnataka</option>
+            <option value="Gujarat">Gujarat</option>
+            <option value="Rajasthan">Rajasthan</option>
+            <option value="Punjab">Punjab</option>
+            <option value="Madhya Pradesh">Madhya Pradesh</option>
+            <option value="Kerala">Kerala</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>🏙️ City</label>
+          <input type="text" id="userCity" placeholder="Kolkata">
+        </div>
+      </div>
+
+      <div class="form-group" id="platformGroup">
+        <label>📱 Platform</label>
+        <select id="userPlatform">
+          <option value="youtube">YouTube</option>
+          <option value="facebook">Facebook</option>
+          <option value="instagram">Instagram</option>
+        </select>
+      </div>
+
+      <button class="btn-primary" onclick="register()">✅ Register / Login</button>
+      
+      <div class="admin-login">
+        🔐 <b>Admin Login:</b><br>
+        Email: <code>admin@viralboost.com</code><br>
+        Password: <code>admin123</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CREATOR DASHBOARD ============ -->
+  <div id="creatorDashboard" class="dashboard">
+    <header>
+      <div class="logo">🚀 ViralBoost</div>
+      <div class="user-info">
+        <span class="firebase-badge">🔥 SYNCED</span>
+        <span class="badge creator">🎬 CREATOR</span>
+        <span class="badge location" id="creatorLocation">📍</span>
+        <span class="badge wallet" id="creatorWalletBadge">💰 ₹0</span>
+        <span id="creatorName"></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card wallet-card">
+        <div class="value" id="cWallet">₹0</div>
+        <div class="label">💰 Wallet Balance</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="cFollowers">0</div>
+        <div class="label">👥 Followers</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="cSubs">0</div>
+        <div class="label">🔔 Subscribers</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="cViews">0</div>
+        <div class="label">👁️ Total Views</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="cSpent">₹0</div>
+        <div class="label">💸 Total Kharch</div>
+      </div>
+    </div>
+
+    <div class="add-money-box">
+      <div>
+        <div style="font-size: 14px; opacity: 0.9;">💰 Wallet Balance</div>
+        <div class="balance">₹<span id="walletBalance">0</span></div>
+      </div>
+      <button onclick="openPaymentModal()">💳 Paisa Add Karein (UPI)</button>
+    </div>
+
+    <div class="panel">
+      <h3>📜 Payment Requests History</h3>
+      <div id="paymentHistory" class="payment-history-list">
+        <p class="no-data">Abhi tak koi payment request nahi ki</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>📤 Naya Video Submit Karein</h3>
+      <div class="form-group">
+        <label>Video Title</label>
+        <input type="text" id="videoTitle" placeholder="Video ka title">
+      </div>
+      <div class="form-group">
+        <label>Video URL</label>
+        <input type="text" id="videoUrl" placeholder="https://youtube.com/...">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Platform</label>
+          <select id="videoPlatform">
+            <option value="youtube">YouTube</option>
+            <option value="facebook">Facebook</option>
+            <option value="instagram">Instagram</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Per View Cost (₹)</label>
+          <input type="number" id="videoReward" value="2" min="1" max="10" onchange="updateCostPreview()">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>🎯 Target State</label>
+        <select id="targetState" onchange="updateCostPreview()">
+          <option value="ALL">🌍 All India</option>
+          <option value="West Bengal">West Bengal</option>
+          <option value="Bihar">Bihar</option>
+          <option value="Delhi">Delhi</option>
+          <option value="Maharashtra">Maharashtra</option>
+          <option value="Uttar Pradesh">Uttar Pradesh</option>
+          <option value="Tamil Nadu">Tamil Nadu</option>
+          <option value="Karnataka">Karnataka</option>
+          <option value="Gujarat">Gujarat</option>
+          <option value="Rajasthan">Rajasthan</option>
+          <option value="Punjab">Punjab</option>
+          <option value="Madhya Pradesh">Madhya Pradesh</option>
+          <option value="Kerala">Kerala</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>🏙️ Target City (Optional)</label>
+        <input type="text" id="targetCity" placeholder="Patna" oninput="updateCostPreview()">
+      </div>
+      
+      <div class="payment-steps" id="costPreview"></div>
+      <div class="warning-box" id="targetPreview">🎯 Target: All India</div>
+      
+      <button class="btn-primary" onclick="submitVideo()">🚀 Video Submit Karein</button>
+    </div>
+
+    <div class="panel">
+      <h3>🎥 Aapke Videos</h3>
+      <div id="creatorVideos" class="video-grid"></div>
+    </div>
+  </div>
+
+  <!-- ============ VIEWER DASHBOARD ============ -->
+  <div id="viewerDashboard" class="dashboard">
+    <header>
+      <div class="logo">🚀 ViralBoost</div>
+      <div class="user-info">
+        <span class="firebase-badge">🔥 SYNCED</span>
+        <span class="badge viewer">👀 VIEWER</span>
+        <span class="badge location" id="viewerLocation">📍</span>
+        <span id="viewerName"></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <div class="add-money-box" style="background: linear-gradient(45deg, #06ffa5, #3a86ff);">
+      <div>
+        <div style="font-size: 14px; opacity: 0.9;">💰 Aapki Earnings</div>
+        <div class="balance">₹<span id="vEarnings">0</span></div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 12px;">Videos Dekhe</div>
+        <div style="font-size: 24px; font-weight: bold;" id="vWatched">0</div>
+      </div>
+    </div>
+
+    <div class="withdraw-box">
+      <div style="font-size: 14px; opacity: 0.95;">🏦 Withdrawable Balance</div>
+      <div class="amount">₹<span id="withdrawAmount">0</span></div>
+      <div style="font-size: 13px; opacity: 0.95; margin-bottom: 15px;">Minimum ₹100 • UPI / Paytm / Bank</div>
+      <button id="withdrawBtn" onclick="toggleWithdrawForm()" disabled>💸 Withdraw Now</button>
+    </div>
+
+    <div id="withdrawForm" class="panel withdraw-form">
+      <h3>💸 Cash Withdrawal</h3>
+      <div class="payment-steps">
+        <b>📋 Rules:</b><br>
+        • Minimum: <b>₹100</b> | Platform fee: <b>5%</b><br>
+        • Processing: <b>24-48 hours</b><br>
+        • Balance: ₹<span id="formBalance">0</span>
+      </div>
+      
+      <div class="form-group">
+        <label>💳 Payment Method</label>
+        <div class="payment-method-selector">
+          <div class="payment-option active" data-method="upi" onclick="selectPayment('upi')">
+            <div class="icon">📱</div><div class="name">UPI</div>
+          </div>
+          <div class="payment-option" data-method="paytm" onclick="selectPayment('paytm')">
+            <div class="icon">💚</div><div class="name">Paytm</div>
+          </div>
+          <div class="payment-option" data-method="bank" onclick="selectPayment('bank')">
+            <div class="icon">🏦</div><div class="name">Bank</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group" id="upiField">
+        <label>UPI ID</label>
+        <input type="text" id="upiId" placeholder="yourname@paytm">
+      </div>
+      <div class="form-group" id="paytmField" style="display:none;">
+        <label>Paytm Number</label>
+        <input type="text" id="paytmNumber" placeholder="10-digit mobile">
+      </div>
+      <div class="form-group" id="bankField" style="display:none;">
+        <label>Account Number</label>
+        <input type="text" id="bankAccount" placeholder="Bank account">
+        <label style="margin-top:10px;">IFSC Code</label>
+        <input type="text" id="bankIfsc" placeholder="SBIN0001234">
+      </div>
+      
+      <div class="form-group">
+        <label>Amount (₹)</label>
+        <input type="number" id="withdrawInput" placeholder="100" min="100">
+      </div>
+      
+      <button class="btn-success" onclick="submitWithdrawal()">💸 Submit Withdrawal</button>
+      <button class="btn-primary" style="background: #666; margin-top: 10px;" onclick="toggleWithdrawForm()">❌ Cancel</button>
+    </div>
+
+    <div class="panel">
+      <h3>📜 Withdrawal History</h3>
+      <div id="withdrawHistory" class="history-list">
+        <p class="no-data">Abhi tak koi withdrawal nahi ki</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>🔥 Available Videos - 30 Second Zaruri</h3>
+      <div class="warning-box" id="locationInfoBox"></div>
+      <div id="viewerVideos" class="video-grid"></div>
+    </div>
+  </div>
+
+  <!-- ============ ADMIN DASHBOARD ============ -->
+  <div id="adminDashboard" class="dashboard">
+    <header>
+      <div class="logo">🚀 ViralBoost Admin</div>
+      <div class="user-info">
+        <span class="firebase-badge">🔥 LIVE</span>
+        <span class="badge admin">🔐 ADMIN</span>
+        <span id="adminName"></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card wallet-card">
+        <div class="value" id="aPending">0</div>
+        <div class="label">⏳ Pending Payments</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="aApproved">0</div>
+        <div class="label">✅ Approved Payments</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="aRevenue">₹0</div>
+        <div class="label">💰 Total Revenue</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="aUsers">0</div>
+        <div class="label">👥 Total Users</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>💰 Pending Payment Requests - Verify UTR & Approve</h3>
+      <div style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>User</th>
+              <th>Amount</th>
+              <th>UTR Number</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="pendingTableBody">
+            <tr><td colspan="6" class="no-data">Koi pending request nahi</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>📋 All Payments History</h3>
+      <div style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>User</th>
+              <th>Amount</th>
+              <th>UTR</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="allPaymentsTableBody">
+            <tr><td colspan="5" class="no-data">Koi record nahi</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>💸 Pending Withdrawal Requests</h3>
+      <div style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>User</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Details</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="pendingWithdrawTableBody">
+            <tr><td colspan="7" class="no-data">Koi pending withdrawal nahi</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ PAYMENT MODAL ============ -->
+<div id="paymentModal" class="modal-overlay">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h3>💳 Add Money to Wallet</h3>
+      <button class="close-btn" onclick="closePaymentModal()">✕</button>
+    </div>
+    
+    <div class="modal-body">
+      <div id="amountStep">
+        <div class="amount-display">
+          <div class="label">Amount to Add</div>
+          <div class="amount">₹<span id="selectedAmount">0</span></div>
+        </div>
+        
+        <div class="topup-options">
+          <button class="topup-btn" onclick="selectAmount(100, this)">₹100</button>
+          <button class="topup-btn" onclick="selectAmount(500, this)">₹500</button>
+          <button class="topup-btn" onclick="selectAmount(1000, this)">₹1000</button>
+          <button class="topup-btn" onclick="selectAmount(5000, this)">₹5000</button>
+        </div>
+        
+        <div class="form-group" style="margin-top: 15px;">
+          <label>Custom Amount (₹)</label>
+          <input type="number" id="customAmount" placeholder="Enter amount" min="10" oninput="setCustomAmount()">
+        </div>
+        
+        <button class="btn-primary" onclick="showQRStep()">Continue →</button>
+      </div>
+      
+      <div id="qrStep" style="display:none;">
+        <div class="amount-display">
+          <div class="label">Pay This Amount</div>
+          <div class="amount">₹<span id="qrAmount">0</span></div>
+        </div>
+        
+        <div class="warning-box">
+          ⚠️ <b>Zaruri:</b> Payment karne ke baad <b>UTR Number</b> daal kar submit karein. Admin verify karke 24 hours mein wallet mein paisa add karega.
+        </div>
+        
+        <div class="qr-container">
+          <div class="qr-box">
+            <img id="qrCodeImg" class="qr-code" src="" alt="UPI QR Code">
+          </div>
+          <div>
+            <div style="font-size: 13px; color: #666; margin-bottom: 8px;">UPI ID:</div>
+            <div class="upi-id-display">
+              <span id="upiIdText"></span>
+              <button class="copy-btn" onclick="copyUpiId()">📋 Copy</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="payment-steps">
+          <b>📖 Steps:</b>
+          <ol>
+            <li>QR code scan karein ya UPI ID copy karein</li>
+            <li>Apne UPI app mein <b>₹<span id="stepAmount">0</span></b> pay karein</li>
+            <li>Payment ke baad UPI app se <b>UTR Number</b> copy karein</li>
+            <li>Woh UTR neeche daalein aur submit karein</li>
+            <li>Admin 24 hours mein verify karega</li>
+          </ol>
+        </div>
+        
+        <div class="form-group">
+          <label>🔢 UTR / Transaction ID (12-18 digits)</label>
+          <input type="text" id="utrInput" class="utr-input" placeholder="123456789012" maxlength="18">
+        </div>
+        
+        <button class="btn-success" onclick="submitPaymentRequest()">✅ Submit Payment Request</button>
+        <button class="btn-primary" style="background: #999; margin-top: 10px;" onclick="backToAmount()">← Back</button>
+      </div>
+      
+      <div id="successStep" style="display:none; text-align: center; padding: 20px;">
+        <div style="font-size: 70px; margin-bottom: 15px;">📤</div>
+        <h2 style="color: #3a86ff; margin-bottom: 15px;">Request Submit Ho Gayi!</h2>
+        <p style="color: #666; margin-bottom: 20px; line-height: 1.6;">
+          Aapki payment request admin ke paas chali gayi hai.<br>
+          <b>24 hours ke andar verify hokar wallet mein paisa add ho jayega.</b>
+        </p>
+        <div style="background: #f0f7ff; padding: 15px; border-radius: 10px; margin: 15px 0; text-align: left; font-size: 13px;">
+          <b>Amount:</b> ₹<span id="successAmount"></span><br>
+          <b>UTR:</b> <span id="successUtr"></span><br>
+          <b>Status:</b> <span class="status pending">⏳ Pending</span>
+        </div>
+        <button class="btn-primary" onclick="closePaymentModal()">Done ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VIDEO MODAL ============ -->
+<div id="videoModal" class="video-modal-overlay">
+  <div class="video-modal">
+    <div class="video-modal-header">
+      <h3 id="modalTitle">▶️ Video Playing...</h3>
+      <button class="close-btn" onclick="closeVideoModal()" id="modalCloseBtn" disabled>✕</button>
+    </div>
+    <div class="video-modal-body">
+      <div class="video-placeholder">
+        <div class="icon">🎬</div>
+        <div id="modalVideoTitle" style="font-size: 16px;"></div>
+      </div>
+      
+      <div class="timer-circle">
+        <svg class="timer-svg">
+          <circle class="timer-bg" cx="60" cy="60" r="52"></circle>
+          <circle class="timer-progress" cx="60" cy="60" r="52" id="timerProgress"></circle>
+        </svg>
+        <div class="timer-text" id="timerText">30</div>
+      </div>
+      
+      <div class="watching-info">
+        ⏳ Video ko <b>30 seconds</b> tak dekhna zaruri hai<br>
+        <span style="font-size: 12px; color: #999;">(Skip karne par coins nahi milenge)</span>
+        <br><br>
+        🪙 Reward: <span class="reward-highlight" id="modalReward">₹2</span>
+      </div>
+      
+      <div class="modal-success" id="modalSuccess" style="display:none;">
+        <div class="icon">🎉</div>
+        <h3>Coins Mil Gaye!</h3>
+        <p id="successMessage"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// CONFIGURATION
+// ============================================
+const PLATFORM_UPI_ID = 's6154632725482301@slc';
+const PLATFORM_NAME = 'ViralBoost';
+const PLATFORM_FEE = 0.20;
+const WITHDRAW_FEE = 0.05;
+const MIN_WITHDRAW = 100;
+const WATCH_TIME = 30;
+
+// ============================================
+// STATE
+// ============================================
+let currentUser = null;
+let selectedType = 'creator';
+let selectedPayment = 'upi';
+let selectedAmount = 0;
+let currentPaymentAmount = 0;
+let allUsers = [];
+let allVideos = [];
+let allWithdrawals = [];
+let allPayments = [];
+
+let watchTimer = null;
+let currentWatchVideo = null;
+let watchStartTime = 0;
+let firebaseReady = false;
+let unsubscribeListeners = [];
+
+// ============================================
+// FIREBASE HELPERS
+// ============================================
+function showLoading(text = 'Loading...') {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+// Wait for Firebase to be ready
+window.addEventListener('firebase-ready', () => {
+  firebaseReady = true;
+  console.log('✅ Firebase ready, app can start');
+});
+
+// Check if Firebase ready
+function checkFirebaseReady() {
+  return new Promise((resolve) => {
+    if (firebaseReady || window.firebaseReady) {
+      resolve(true);
+      return;
+    }
+    const checkInterval = setInterval(() => {
+      if (window.firebaseReady) {
+        clearInterval(checkInterval);
+        resolve(true);
+      }
+    }, 100);
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      resolve(false);
+    }, 5000);
+  });
+}
+
+// Firebase CRUD wrappers
+async function fbAdd(collectionName, data) {
+  const { collection, addDoc, serverTimestamp } = window.firestoreFns;
+  const db = window.db;
+  return await addDoc(collection(db, collectionName), {
+    ...data,
+    serverTimestamp: serverTimestamp()
+  });
+}
+
+async function fbGet(collectionName) {
+  const { collection, getDocs } = window.firestoreFns;
+  const db = window.db;
+  const snapshot = await getDocs(collection(db, collectionName));
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function fbGetWhere(collectionName, field, operator, value) {
+  const { collection, getDocs, query, where } = window.firestoreFns;
+  const db = window.db;
+  const q = query(collection(db, collectionName), where(field, operator, value));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function fbUpdate(collectionName, docId, data) {
+  const { doc, updateDoc } = window.firestoreFns;
+  const db = window.db;
+  return await updateDoc(doc(db, collectionName, docId), data);
+}
+
+async function fbSet(collectionName, docId, data) {
+  const { doc, setDoc, serverTimestamp } = window.firestoreFns;
+  const db = window.db;
+  return await setDoc(doc(db, collectionName, docId), {
+    ...data,
+    serverTimestamp: serverTimestamp()
+  });
+}
+
+// Load all data from Firebase
+async function loadAllData() {
+  try {
+    const [users, videos, withdrawals, payments] = await Promise.all([
+      fbGet('users'),
+      fbGet('videos'),
+      fbGet('withdrawals'),
+      fbGet('payments')
+    ]);
+    allUsers = users;
+    allVideos = videos;
+    allWithdrawals = withdrawals;
+    allPayments = payments;
+    console.log('📊 Data loaded:', { users: users.length, videos: videos.length });
+  } catch (err) {
+    console.error('❌ Data load error:', err);
+  }
+}
+
+// ============================================
+// UI HELPERS
+// ============================================
+function selectType(type) {
+  selectedType = type;
+  document.querySelectorAll('.type-card').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.type-card[data-type="${type}"]`).classList.add('active');
+  document.getElementById('platformGroup').style.display = type === 'creator' ? 'block' : 'none';
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast' + (type === 'error' ? ' error' : type === 'info' ? ' info' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ============================================
+// REGISTER / LOGIN
+// ============================================
+async function register() {
+  const name = document.getElementById('userName').value.trim();
+  const email = document.getElementById('userEmail').value.trim();
+  const pass = document.getElementById('userPass').value;
+  const platform = document.getElementById('userPlatform').value;
+  const state = document.getElementById('userState').value;
+  const city = document.getElementById('userCity').value.trim();
+
+  if (!name || !email || !pass) { alert('⚠️ Sabhi fields bharein!'); return; }
+  if (!state) { alert('⚠️ State select karein!'); return; }
+
+  // Admin login
+  if (email === 'admin@viralboost.com' && pass === 'admin123') {
+    currentUser = { id: 'admin', type: 'admin', name: 'Admin', email };
+    loginDashboard();
+    return;
+  }
+
+  try {
+    showLoading('Checking account...');
+    
+    // Check if user exists in Firebase
+    const users = await fbGetWhere('users', 'email', '==', email);
+    let user = users.find(u => u.type === selectedType);
+    
+    if (user) {
+      if (user.pass !== pass) {
+        hideLoading();
+        alert('❌ Galat password!');
+        return;
+      }
+    } else {
+      // Create new user in Firebase
+      const userData = {
+        name, email, pass,
+        type: selectedType,
+        platform: selectedType === 'creator' ? platform : null,
+        state, city: city || state,
+        followers: 0, subscribers: 0, views: 0,
+        wallet: 0, spent: 0,
+        earnings: 0, watched: 0,
+        createdAt: new Date().toISOString()
+      };
+      
+      const docRef = await fbAdd('users', userData);
+      user = { id: docRef.id, ...userData };
+      allUsers.push(user);
+      showToast('🎉 Registration successful!');
+    }
+    
+    currentUser = user;
+    hideLoading();
+    loginDashboard();
+  } catch (err) {
+    hideLoading();
+    console.error(err);
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+async function loginDashboard() {
+  document.getElementById('authScreen').style.display = 'none';
+  
+  if (currentUser.type === 'creator') {
+    document.getElementById('creatorDashboard').style.display = 'block';
+    document.getElementById('creatorName').textContent = currentUser.name;
+    document.getElementById('creatorLocation').textContent = '📍 ' + currentUser.city + ', ' + currentUser.state;
+    await refreshCreatorData();
+    updateCostPreview();
+  } else if (currentUser.type === 'viewer') {
+    document.getElementById('viewerDashboard').style.display = 'block';
+    document.getElementById('viewerName').textContent = currentUser.name;
+    document.getElementById('viewerLocation').textContent = '📍 ' + currentUser.city + ', ' + currentUser.state;
+    await refreshViewerData();
+  } else if (currentUser.type === 'admin') {
+    document.getElementById('adminDashboard').style.display = 'block';
+    document.getElementById('adminName').textContent = 'Admin';
+    await refreshAdminData();
+  }
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('authScreen').style.display = 'block';
+  document.getElementById('creatorDashboard').style.display = 'none';
+  document.getElementById('viewerDashboard').style.display = 'none';
+  document.getElementById('adminDashboard').style.display = 'none';
+  document.getElementById('paymentModal').classList.remove('active');
+  document.getElementById('withdrawForm').classList.remove('active');
+  ['userName', 'userEmail', 'userPass', 'userCity'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ============================================
+// CREATOR - PAYMENT FLOW
+// ============================================
+function openPaymentModal() {
+  document.getElementById('amountStep').style.display = 'block';
+  document.getElementById('qrStep').style.display = 'none';
+  document.getElementById('successStep').style.display = 'none';
+  selectedAmount = 0;
+  document.getElementById('selectedAmount').textContent = '0';
+  document.getElementById('customAmount').value = '';
+  document.querySelectorAll('.topup-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('paymentModal').classList.add('active');
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').classList.remove('active');
+  if (currentUser && currentUser.type === 'creator') {
+    refreshCreatorData();
+  }
+}
+
+function selectAmount(amount, btn) {
+  selectedAmount = amount;
+  document.getElementById('selectedAmount').textContent = amount;
+  document.getElementById('customAmount').value = '';
+  document.querySelectorAll('.topup-btn').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+}
+
+function setCustomAmount() {
+  const val = parseFloat(document.getElementById('customAmount').value) || 0;
+  selectedAmount = val;
+  document.getElementById('selectedAmount').textContent = val;
+  document.querySelectorAll('.topup-btn').forEach(b => b.classList.remove('selected'));
+}
+
+function showQRStep() {
+  if (selectedAmount < 10) {
+    showToast('⚠️ Minimum ₹10 add karein!', 'error');
+    return;
+  }
+  currentPaymentAmount = selectedAmount;
+  document.getElementById('qrAmount').textContent = selectedAmount;
+  document.getElementById('stepAmount').textContent = selectedAmount;
+  
+  const upiUrl = `upi://pay?pa=${PLATFORM_UPI_ID}&pn=${encodeURIComponent(PLATFORM_NAME)}&am=${selectedAmount}&cu=INR&tn=Wallet Topup`;
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUrl)}`;
+  
+  document.getElementById('qrCodeImg').src = qrApiUrl;
+  document.getElementById('upiIdText').textContent = PLATFORM_UPI_ID;
+  document.getElementById('utrInput').value = '';
+  
+  document.getElementById('amountStep').style.display = 'none';
+  document.getElementById('qrStep').style.display = 'block';
+}
+
+function backToAmount() {
+  document.getElementById('amountStep').style.display = 'block';
+  document.getElementById('qrStep').style.display = 'none';
+}
+
+function copyUpiId() {
+  navigator.clipboard.writeText(PLATFORM_UPI_ID).then(() => {
+    showToast('📋 UPI ID copy ho gayi!');
+  }).catch(() => {
+    const el = document.createElement('textarea');
+    el.value = PLATFORM_UPI_ID;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    el.remove();
+    showToast('📋 UPI ID copy ho gayi!');
+  });
+}
+
+async function submitPaymentRequest() {
+  const utr = document.getElementById('utrInput').value.trim();
+  
+  if (!utr || utr.length < 10) {
+    showToast('⚠️ Sahi UTR Number daalein!', 'error');
+    return;
+  }
+  
+  try {
+    showLoading('Submitting request...');
+    
+    // Check duplicate UTR
+    const existing = await fbGetWhere('payments', 'utr', '==', utr);
+    if (existing.length > 0) {
+      hideLoading();
+      showToast('❌ Ye UTR pehle se use ho chuka hai!', 'error');
+      return;
+    }
+    
+    const paymentData = {
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userEmail: currentUser.email,
+      amount: currentPaymentAmount,
+      utr: utr,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      approvedAt: null
+    };
+    
+    const docRef = await fbAdd('payments', paymentData);
+    allPayments.push({ id: docRef.id, ...paymentData });
+    
+    hideLoading();
+    
+    document.getElementById('successAmount').textContent = currentPaymentAmount;
+    document.getElementById('successUtr').textContent = utr;
+    document.getElementById('qrStep').style.display = 'none';
+    document.getElementById('successStep').style.display = 'block';
+    
+    showToast('✅ Payment request submit ho gayi!');
+  } catch (err) {
+    hideLoading();
+    console.error(err);
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+// ============================================
+// CREATOR - REFRESH DATA
+// ============================================
+async function refreshCreatorData() {
+  try {
+    // Reload user from Firebase
+    const users = await fbGetWhere('users', 'email', '==', currentUser.email);
+    const freshUser = users.find(u => u.type === 'creator');
+    if (freshUser) currentUser = freshUser;
+    
+    // Reload payments
+    allPayments = await fbGetWhere('payments', 'userId', '==', currentUser.id);
+    // Reload videos
+    allVideos = await fbGet('videos');
+    
+    // Update UI
+    document.getElementById('cWallet').textContent = '₹' + (currentUser.wallet || 0).toFixed(2);
+    document.getElementById('walletBalance').textContent = (currentUser.wallet || 0).toFixed(2);
+    document.getElementById('creatorWalletBadge').textContent = '💰 ₹' + (currentUser.wallet || 0).toFixed(0);
+    document.getElementById('cFollowers').textContent = currentUser.followers || 0;
+    document.getElementById('cSubs').textContent = currentUser.subscribers || 0;
+    document.getElementById('cViews').textContent = currentUser.views || 0;
+    document.getElementById('cSpent').textContent = '₹' + (currentUser.spent || 0).toFixed(2);
+
+    renderPaymentHistory();
+    renderCreatorVideos();
+  } catch (err) {
+    console.error('Refresh error:', err);
+  }
+}
+
+function updateCostPreview() {
+  const reward = parseFloat(document.getElementById('videoReward').value) || 2;
+  const total = (reward * (1 + PLATFORM_FEE)).toFixed(2);
+  
+  document.getElementById('costPreview').innerHTML = 
+    `💰 <b>Cost:</b> Viewer ko ₹${reward} + 20% fee = <b>₹${total} per view</b>`;
+  
+  const state = document.getElementById('targetState').value;
+  const city = document.getElementById('targetCity').value.trim();
+  const preview = document.getElementById('targetPreview');
+  
+  if (state === 'ALL') preview.innerHTML = '🎯 <b>Target:</b> 🌍 All India';
+  else if (city) preview.innerHTML = `🎯 <b>Target:</b> 📍 ${city}, ${state}`;
+  else preview.innerHTML = `🎯 <b>Target:</b> 📍 ${state}`;
+}
+
+async function submitVideo() {
+  const title = document.getElementById('videoTitle').value.trim();
+  const url = document.getElementById('videoUrl').value.trim();
+  const platform = document.getElementById('videoPlatform').value;
+  const reward = parseFloat(document.getElementById('videoReward').value) || 2;
+  const targetState = document.getElementById('targetState').value;
+  const targetCity = document.getElementById('targetCity').value.trim();
+
+  if (!title || !url) { alert('⚠️ Title aur URL bharein!'); return; }
+  
+  const totalCost = reward * (1 + PLATFORM_FEE);
+  if ((currentUser.wallet || 0) < totalCost) {
+    showToast(`❌ Wallet mein ₹${totalCost.toFixed(2)} chahiye!`, 'error');
+    return;
+  }
+
+  try {
+    showLoading('Submitting video...');
+    
+    const videoData = {
+      creatorId: currentUser.id,
+      creatorName: currentUser.name,
+      creatorLocation: currentUser.city + ', ' + currentUser.state,
+      title, url, platform, reward,
+      targetState, targetCity,
+      views: 0, watchedBy: [], totalSpent: 0, isActive: true,
+      createdAt: new Date().toISOString()
+    };
+
+    const docRef = await fbAdd('videos', videoData);
+    allVideos.push({ id: docRef.id, ...videoData });
+    
+    hideLoading();
+    ['videoTitle', 'videoUrl', 'targetCity'].forEach(id => document.getElementById(id).value = '');
+    showToast('🎬 Video submit ho gaya!');
+    refreshCreatorData();
+  } catch (err) {
+    hideLoading();
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+function renderPaymentHistory() {
+  const container = document.getElementById('paymentHistory');
+  const myPayments = allPayments
+    .filter(p => p.userId === currentUser.id)
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  
+  if (myPayments.length === 0) {
+    container.innerHTML = '<p class="no-data">Abhi tak koi payment request nahi ki</p>';
+    return;
+  }
+  
+  container.innerHTML = myPayments.map(p => {
+    const date = new Date(p.createdAt).toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+    });
+    const statusText = p.status === 'pending' ? '⏳ Pending' : p.status === 'approved' ? '✅ Approved' : '❌ Rejected';
+    
+    return `
+      <div class="payment-item ${p.status}">
+        <div class="top-row">
+          <div class="amount">₹${p.amount}</div>
+          <span class="status ${p.status}">${statusText}</span>
+        </div>
+        <div class="details">
+          <b>UTR:</b> <span class="utr">${p.utr}</span><br>
+          <b>Date:</b> ${date}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderCreatorVideos() {
+  const myVideos = allVideos.filter(v => v.creatorId === currentUser.id);
+  const container = document.getElementById('creatorVideos');
+  
+  if (myVideos.length === 0) {
+    container.innerHTML = '<p class="no-data">Abhi tak koi video submit nahi ki.</p>';
+    return;
+  }
+
+  container.innerHTML = myVideos.map(v => {
+    let targetText = v.targetState === 'ALL' ? '🌍 All India' : (v.targetCity ? `📍 ${v.targetCity}` : `📍 ${v.targetState}`);
+    const totalCostPerView = v.reward * (1 + PLATFORM_FEE);
+    const canAfford = (currentUser.wallet || 0) >= totalCostPerView;
+    const isActive = v.isActive && canAfford;
+    
+    return `
+    <div class="video-card ${!isActive ? 'paused' : ''}">
+      <div class="video-thumb">
+        🎬
+        <span class="platform-tag ${v.platform}">${v.platform.toUpperCase()}</span>
+        <span class="location-tag">${targetText}</span>
+        ${!isActive ? '<div class="paused-tag">⏸️ PAUSED</div>' : ''}
+      </div>
+      <div class="video-info">
+        <h4>${v.title}</h4>
+        <p>👁️ ${v.views} views | 💰 ₹${v.reward}/view</p>
+        <div class="reward-badge" style="background: ${isActive ? '#06ffa5' : '#ef476f'}; color: ${isActive ? '#004d2e' : 'white'};">
+          ${isActive ? '✅ Active' : '⏸️ Paused'}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================
+// VIEWER
+// ============================================
+async function refreshViewerData() {
+  try {
+    const users = await fbGetWhere('users', 'email', '==', currentUser.email);
+    const freshUser = users.find(u => u.type === 'viewer');
+    if (freshUser) currentUser = freshUser;
+    
+    allVideos = await fbGet('videos');
+    allWithdrawals = await fbGetWhere('withdrawals', 'userId', '==', currentUser.id);
+    allUsers = await fbGet('users');
+    
+    document.getElementById('vEarnings').textContent = (currentUser.earnings || 0).toFixed(2);
+    document.getElementById('vWatched').textContent = currentUser.watched || 0;
+    document.getElementById('withdrawAmount').textContent = (currentUser.earnings || 0).toFixed(2);
+    document.getElementById('formBalance').textContent = (currentUser.earnings || 0).toFixed(2);
+    document.getElementById('withdrawBtn').disabled = (currentUser.earnings || 0) < MIN_WITHDRAW;
+    
+    document.getElementById('locationInfoBox').innerHTML = 
+      `📍 <b>Location:</b> ${currentUser.city}, ${currentUser.state} — Har video <b>30 sec</b> dekhna zaruri!`;
+
+    renderWithdrawHistory();
+    renderViewerVideos();
+  } catch (err) {
+    console.error('Viewer refresh error:', err);
+  }
+}
+
+function renderViewerVideos() {
+  const container = document.getElementById('viewerVideos');
+  const availableVideos = allVideos.filter(v => {
+    if ((v.watchedBy || []).includes(currentUser.id)) return false;
+    if (!v.isActive) return false;
+    const creator = allUsers.find(u => u.id === v.creatorId);
+    if (!creator) return false;
+    if ((creator.wallet || 0) < v.reward * (1 + PLATFORM_FEE)) return false;
+    if (v.targetState === 'ALL') return true;
+    if (v.targetState !== currentUser.state) return false;
+    if (v.targetCity && v.targetCity.trim() !== '') {
+      return v.targetCity.toLowerCase().trim() === (currentUser.city || '').toLowerCase().trim();
+    }
+    return true;
+  });
+
+  if (availableVideos.length === 0) {
+    container.innerHTML = '<p class="no-data">Aapke area ke liye abhi koi video nahi.</p>';
+    return;
+  }
+
+  container.innerHTML = availableVideos.map(v => {
+    let targetText = v.targetState === 'ALL' ? '🌍 All India' : (v.targetCity ? `📍 ${v.targetCity}` : `📍 ${v.targetState}`);
+    return `
+    <div class="video-card">
+      <div class="video-thumb">
+        🎬
+        <span class="platform-tag ${v.platform}">${v.platform.toUpperCase()}</span>
+        <span class="location-tag">${targetText}</span>
+        <div class="paused-tag" style="background: #8338ec;">⏱️ 30 sec zaruri</div>
+      </div>
+      <div class="video-info">
+        <h4>${v.title}</h4>
+        <p>👤 ${v.creatorName}</p>
+        <div class="reward-badge">🪙 Kamayein ₹${v.reward}</div>
+        <button class="btn-watch" onclick="openVideoModal('${v.id}')">▶️ Video Dekhein</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================
+// VIDEO WATCH
+// ============================================
+function openVideoModal(videoId) {
+  const video = allVideos.find(v => v.id === videoId);
+  if (!video) return;
+  const creator = allUsers.find(u => u.id === video.creatorId);
+  if (!creator || (creator.wallet || 0) < video.reward * (1 + PLATFORM_FEE)) {
+    showToast('❌ Creator ka wallet khatam!', 'error');
+    return;
+  }
+  
+  currentWatchVideo = video;
+  watchStartTime = Date.now();
+  
+  document.getElementById('modalTitle').textContent = '▶️ Video Playing...';
+  document.getElementById('modalVideoTitle').textContent = video.title;
+  document.getElementById('modalReward').textContent = '₹' + video.reward;
+  document.getElementById('modalSuccess').style.display = 'none';
+  document.getElementById('modalCloseBtn').disabled = true;
+  document.getElementById('videoModal').classList.add('active');
+  
+  startWatchTimer(video.reward);
+}
+
+function startWatchTimer(reward) {
+  let secondsLeft = WATCH_TIME;
+  const circle = document.getElementById('timerProgress');
+  const circumference = 2 * Math.PI * 52;
+  circle.style.strokeDasharray = circumference;
+  circle.style.strokeDashoffset = 0;
+  document.getElementById('timerText').textContent = secondsLeft;
+  document.getElementById('timerText').style.color = '#06ffa5';
+  circle.style.stroke = '#06ffa5';
+  
+  watchTimer = setInterval(() => {
+    secondsLeft--;
+    document.getElementById('timerText').textContent = secondsLeft;
+    const progress = (WATCH_TIME - secondsLeft) / WATCH_TIME;
+    circle.style.strokeDashoffset = circumference * progress;
+    
+    if (secondsLeft <= 10) {
+      document.getElementById('timerText').style.color = '#ffc107';
+      circle.style.stroke = '#ffc107';
+    }
+    if (secondsLeft <= 5) {
+      document.getElementById('timerText').style.color = '#ef476f';
+      circle.style.stroke = '#ef476f';
+    }
+    if (secondsLeft <= 0) {
+      clearInterval(watchTimer);
+      completeWatch();
+    }
+  }, 1000);
+}
+
+async function completeWatch() {
+  const video = currentWatchVideo;
+  if (!video) return;
+  
+  const watchDuration = (Date.now() - watchStartTime) / 1000;
+  if (watchDuration < WATCH_TIME - 2) {
+    closeVideoModal();
+    showToast('⚠️ Video poora nahi dekha!', 'error');
+    return;
+  }
+  
+  try {
+    const creator = allUsers.find(u => u.id === video.creatorId);
+    const viewerReward = video.reward;
+    const platformFee = video.reward * PLATFORM_FEE;
+    const totalDeduct = viewerReward + platformFee;
+    
+    // Update creator in Firebase
+    await fbUpdate('users', creator.id, {
+      wallet: (creator.wallet || 0) - totalDeduct,
+      spent: (creator.spent || 0) + totalDeduct,
+      views: (creator.views || 0) + 1,
+      followers: (creator.followers || 0) + Math.floor(Math.random() * 3) + 1,
+      subscribers: (creator.subscribers || 0) + Math.floor(Math.random() * 2) + 1
+    });
+    
+    // Update video
+    const newWatchedBy = [...(video.watchedBy || []), currentUser.id];
+    await fbUpdate('videos', video.id, {
+      views: (video.views || 0) + 1,
+      watchedBy: newWatchedBy,
+      totalSpent: (video.totalSpent || 0) + totalDeduct,
+      isActive: (creator.wallet - totalDeduct) >= totalDeduct
+    });
+    
+    // Update viewer
+    await fbUpdate('users', currentUser.id, {
+      earnings: (currentUser.earnings || 0) + viewerReward,
+      watched: (currentUser.watched || 0) + 1
+    });
+    
+    // Update local state
+    currentUser.earnings = (currentUser.earnings || 0) + viewerReward;
+    currentUser.watched = (currentUser.watched || 0) + 1;
+    video.watchedBy = newWatchedBy;
+    
+    document.getElementById('modalTitle').textContent = '✅ Complete!';
+    document.getElementById('modalSuccess').style.display = 'block';
+    document.getElementById('successMessage').textContent = `Aapne ₹${viewerReward} kamaye! Total: ₹${currentUser.earnings.toFixed(2)}`;
+    document.getElementById('modalCloseBtn').disabled = false;
+    document.getElementById('timerText').textContent = '✓';
+    document.getElementById('timerText').style.color = '#06ffa5';
+    
+    showToast(`🪙 ₹${viewerReward} kamaye!`);
+  } catch (err) {
+    console.error(err);
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+function closeVideoModal() {
+  if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
+  document.getElementById('videoModal').classList.remove('active');
+  currentWatchVideo = null;
+  refreshViewerData();
+}
+
+// ============================================
+// WITHDRAWAL
+// ============================================
+function toggleWithdrawForm() {
+  document.getElementById('withdrawForm').classList.toggle('active');
+}
+
+function selectPayment(method) {
+  selectedPayment = method;
+  document.querySelectorAll('.payment-option').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.payment-option[data-method="${method}"]`).classList.add('active');
+  document.getElementById('upiField').style.display = method === 'upi' ? 'block' : 'none';
+  document.getElementById('paytmField').style.display = method === 'paytm' ? 'block' : 'none';
+  document.getElementById('bankField').style.display = method === 'bank' ? 'block' : 'none';
+}
+
+async function submitWithdrawal() {
+  const amount = parseFloat(document.getElementById('withdrawInput').value);
+  
+  if (!amount || amount < MIN_WITHDRAW) {
+    showToast(`⚠️ Minimum ₹${MIN_WITHDRAW}!`, 'error');
+    return;
+  }
+  if (amount > (currentUser.earnings || 0)) {
+    showToast(`❌ Sirf ₹${(currentUser.earnings || 0).toFixed(2)} hai!`, 'error');
+    return;
+  }
+  
+  let paymentDetail = '';
+  if (selectedPayment === 'upi') {
+    const upi = document.getElementById('upiId').value.trim();
+    if (!upi || !upi.includes('@')) { showToast('❌ Sahi UPI ID!', 'error'); return; }
+    paymentDetail = upi;
+  } else if (selectedPayment === 'paytm') {
+    const num = document.getElementById('paytmNumber').value.trim();
+    if (!num || num.length !== 10) { showToast('❌ 10-digit number!', 'error'); return; }
+    paymentDetail = num;
+  } else {
+    const acc = document.getElementById('bankAccount').value.trim();
+    const ifsc = document.getElementById('bankIfsc').value.trim();
+    if (!acc || !ifsc) { showToast('❌ Account + IFSC!', 'error'); return; }
+    paymentDetail = acc + ' / ' + ifsc;
+  }
+  
+  try {
+    showLoading('Submitting withdrawal...');
+    
+    const fee = amount * WITHDRAW_FEE;
+    const netAmount = amount - fee;
+    
+    const withdrawalData = {
+      userId: currentUser.id,
+      userName: currentUser.name,
+      amount, fee, netAmount,
+      method: selectedPayment,
+      paymentDetail,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+    
+    const docRef = await fbAdd('withdrawals', withdrawalData);
+    allWithdrawals.push({ id: docRef.id, ...withdrawalData });
+    
+    await fbUpdate('users', currentUser.id, {
+      earnings: (currentUser.earnings || 0) - amount
+    });
+    currentUser.earnings = (currentUser.earnings || 0) - amount;
+    
+    hideLoading();
+    showToast(`💸 Request submit! Admin verify karega.`);
+    ['withdrawInput', 'upiId', 'paytmNumber', 'bankAccount', 'bankIfsc'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('withdrawForm').classList.remove('active');
+    refreshViewerData();
+  } catch (err) {
+    hideLoading();
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+function renderWithdrawHistory() {
+  const container = document.getElementById('withdrawHistory');
+  const myWithdrawals = allWithdrawals.filter(w => w.userId === currentUser.id).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  
+  if (myWithdrawals.length === 0) {
+    container.innerHTML = '<p class="no-data">Abhi tak koi withdrawal nahi ki</p>';
+    return;
+  }
+  
+  container.innerHTML = myWithdrawals.map(w => {
+    const date = new Date(w.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const statusText = w.status === 'pending' ? '⏳ Pending' : w.status === 'completed' ? '✅ Completed' : '❌ Rejected';
+    return `
+      <div class="history-item">
+        <div>
+          <div style="font-weight: bold;">₹${w.netAmount.toFixed(2)}</div>
+          <div style="font-size: 11px; color: #999;">${w.method.toUpperCase()} • ${w.paymentDetail}</div>
+          <div style="font-size: 11px; color: #999;">${date}</div>
+        </div>
+        <span class="status ${w.status}">${statusText}</span>
+      </div>`;
+  }).join('');
+}
+
+// ============================================
+// ADMIN
+// ============================================
+async function refreshAdminData() {
+  try {
+    allUsers = await fbGet('users');
+    allPayments = await fbGet('payments');
+    allWithdrawals = await fbGet('withdrawals');
+    
+    const pending = allPayments.filter(p => p.status === 'pending');
+    const approved = allPayments.filter(p => p.status === 'approved');
+    const revenue = approved.reduce((sum, p) => sum + p.amount, 0);
+    
+    document.getElementById('aPending').textContent = pending.length;
+    document.getElementById('aApproved').textContent = approved.length;
+    document.getElementById('aRevenue').textContent = '₹' + revenue.toFixed(0);
+    document.getElementById('aUsers').textContent = allUsers.length;
+    
+    // Pending table
+    const pendingBody = document.getElementById('pendingTableBody');
+    if (pending.length === 0) {
+      pendingBody.innerHTML = '<tr><td colspan="6" class="no-data">Koi pending request nahi</td></tr>';
+    } else {
+      pendingBody.innerHTML = pending.map(p => {
+        const date = new Date(p.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return `
+          <tr>
+            <td>${date}</td>
+            <td><b>${p.userName}</b><br><small style="color:#999;">${p.userEmail}</small></td>
+            <td><b>₹${p.amount}</b></td>
+            <td><span style="background:#e0e0e0; padding:2px 6px; border-radius:4px; font-family:monospace;">${p.utr}</span></td>
+            <td><span class="status pending">⏳ Pending</span></td>
+            <td>
+              <button class="action-btn approve-btn" onclick="approvePayment('${p.id}')">✅ Approve</button>
+              <button class="action-btn reject-btn" onclick="rejectPayment('${p.id}')">❌ Reject</button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+    
+    // All payments
+    const allBody = document.getElementById('allPaymentsTableBody');
+    const sortedPayments = [...allPayments].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 20);
+    if (sortedPayments.length === 0) {
+      allBody.innerHTML = '<tr><td colspan="5" class="no-data">Koi record nahi</td></tr>';
+    } else {
+      allBody.innerHTML = sortedPayments.map(p => {
+        const date = new Date(p.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const statusText = p.status === 'pending' ? '⏳ Pending' : p.status === 'approved' ? '✅ Approved' : '❌ Rejected';
+        return `
+          <tr>
+            <td>${date}</td>
+            <td>${p.userName}</td>
+            <td>₹${p.amount}</td>
+            <td style="font-family:monospace; font-size:11px;">${p.utr}</td>
+            <td><span class="status ${p.status}">${statusText}</span></td>
+          </tr>`;
+      }).join('');
+    }
+    
+    // Pending withdrawals
+    const pendingW = allWithdrawals.filter(w => w.status === 'pending');
+    const wBody = document.getElementById('pendingWithdrawTableBody');
+    if (pendingW.length === 0) {
+      wBody.innerHTML = '<tr><td colspan="7" class="no-data">Koi pending withdrawal nahi</td></tr>';
+    } else {
+      wBody.innerHTML = pendingW.map(w => {
+        const date = new Date(w.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return `
+          <tr>
+            <td>${date}</td>
+            <td>${w.userName}</td>
+            <td><b>₹${w.netAmount.toFixed(2)}</b></td>
+            <td>${w.method.toUpperCase()}</td>
+            <td style="font-size:11px;">${w.paymentDetail}</td>
+            <td><span class="status pending">⏳ Pending</span></td>
+            <td>
+              <button class="action-btn approve-btn" onclick="completeWithdrawal('${w.id}')">✅ Paid</button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+  } catch (err) {
+    console.error('Admin refresh error:', err);
+  }
+}
+
+async function approvePayment(paymentId) {
+  const payment = allPayments.find(p => p.id === paymentId);
+  if (!payment || payment.status !== 'pending') {
+    showToast('⚠️ Ye already processed hai!', 'error');
+    return;
+  }
+  
+  try {
+    showLoading('Approving payment...');
+    
+    await fbUpdate('payments', paymentId, {
+      status: 'approved',
+      approvedAt: new Date().toISOString()
+    });
+    
+    const user = allUsers.find(u => u.id === payment.userId);
+    if (user) {
+      await fbUpdate('users', user.id, {
+        wallet: (user.wallet || 0) + payment.amount
+      });
+    }
+    
+    hideLoading();
+    showToast(`✅ ₹${payment.amount} ${payment.userName} ke wallet mein add!`);
+    refreshAdminData();
+  } catch (err) {
+    hideLoading();
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+async function rejectPayment(paymentId) {
+  if (!confirm('Pakka reject karna hai?')) return;
+  
+  try {
+    await fbUpdate('payments', paymentId, {
+      status: 'rejected',
+      approvedAt: new Date().toISOString()
+    });
+    showToast(`❌ Payment rejected!`, 'info');
+    refreshAdminData();
+  } catch (err) {
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+async function completeWithdrawal(withdrawalId) {
+  try {
+    await fbUpdate('withdrawals', withdrawalId, {
+      status: 'completed',
+      processedAt: new Date().toISOString()
+    });
+    showToast(`✅ Withdrawal complete!`);
+    refreshAdminData();
+  } catch (err) {
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+// ============================================
+// INIT
+// ============================================
+document.getElementById('platformGroup').style.display = 'block';
+updateCostPreview();
+
+// Wait for Firebase to load
+checkFirebaseReady().then((ready) => {
+  if (ready) {
+    console.log('🎉 App started with Firebase!');
+  } else {
+    console.error('❌ Firebase failed to load');
+    alert('Firebase load nahi hua! Internet check karein.');
+  }
+});
+</script>
+
+</body>
+</html>
